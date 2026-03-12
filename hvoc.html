@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HVOC — Veilid P2P Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset & Base ───────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: #080b10;
+  color: #d4f5e9;
+  overflow: hidden;
+}
+button { font-family: inherit; cursor: pointer; }
+input, textarea { font-family: inherit; color-scheme: dark; }
+input::placeholder, textarea::placeholder { color: #2d5045; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,255,180,0.15); }
+
+/* ── CSS Variables ──────────────────────────────────────────────────────── */
+:root {
+  --bg-root:        #080b10;
+  --bg-surface:     #0d1117;
+  --bg-elevated:    #131b24;
+  --bg-overlay:     #1a2436;
+  --border-subtle:  rgba(0,255,180,0.06);
+  --border-default: rgba(0,255,180,0.12);
+  --border-strong:  rgba(0,255,180,0.22);
+  --text-primary:   #d4f5e9;
+  --text-secondary: #5a9e82;
+  --text-muted:     #2d5045;
+  --accent:         #00ffb4;
+  --accent-dim:     rgba(0,255,180,0.12);
+  --critical:       #ff3b3b;
+  --warning:        #f59e0b;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+#app { display: flex; height: 100vh; }
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+#sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+}
+.logo {
+  padding: 16px 14px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.logo-sub {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-top: 3px;
+}
+nav { flex: 1; padding-top: 8px; }
+.nav-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text-secondary);
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-align: left;
+  transition: all 120ms ease-out;
+}
+.nav-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.nav-btn.active {
+  background: var(--bg-elevated);
+  border-left-color: var(--accent);
+  color: var(--accent);
+}
+.nav-icon { width: 14px; height: 14px; flex-shrink: 0; }
+.identity-block {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+.identity-name { font-size: 11px; color: var(--text-primary); margin-bottom: 2px; }
+.identity-key  { font-size: 9px; color: var(--text-muted); word-break: break-all; }
+.node-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  margin-top: 8px;
+}
+.node-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  transition: all 400ms ease;
+}
+.node-dot.off { background: var(--text-muted); box-shadow: none; }
+.node-label { font-size: 9px; color: var(--text-secondary); letter-spacing: 0.8px; }
+
+/* ── Main Content ───────────────────────────────────────────────────────── */
+#main {
+  flex: 1;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.view { display: flex; flex-direction: column; height: 100%; }
+.view.hidden { display: none; }
+
+/* ── Panel Header ───────────────────────────────────────────────────────── */
+.panel-header {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+.panel-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.header-actions { display: flex; gap: 6px; align-items: center; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  background: var(--accent-dim);
+  border: 1px solid var(--border-default);
+  color: var(--accent);
+  padding: 6px 14px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 120ms ease-out;
+}
+.btn:hover { background: rgba(0,255,180,0.2); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 5px 12px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 120ms ease-out;
+}
+.btn-ghost:hover { border-color: var(--border-default); color: var(--text-primary); }
+.btn-danger {
+  background: transparent;
+  border: 1px solid rgba(255,59,59,0.2);
+  color: var(--critical);
+  padding: 6px 14px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 120ms ease-out;
+}
+.btn-danger:hover { background: rgba(255,59,59,0.08); }
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  transition: all 120ms ease-out;
+}
+.btn-icon:hover { color: var(--text-primary); border-color: var(--border-default); }
+
+/* ── Form Controls ──────────────────────────────────────────────────────── */
+.field-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+input.ctrl, textarea.ctrl {
+  background: var(--bg-root);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 7px 12px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color 120ms;
+}
+input.ctrl:focus, textarea.ctrl:focus { border-color: var(--border-strong); }
+textarea.ctrl { resize: vertical; min-height: 90px; line-height: 1.6; padding: 10px 12px; }
+
+/* ── Scrollable content areas ───────────────────────────────────────────── */
+.scroll { flex: 1; overflow-y: auto; }
+
+/* ── Thread list ────────────────────────────────────────────────────────── */
+.thread-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 100ms ease-out;
+}
+.thread-item:hover {
+  background: var(--bg-elevated);
+  border-left-color: var(--accent);
+}
+.thread-title {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+.thread-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 9px;
+}
+.thread-meta .author { color: var(--text-muted); }
+.thread-meta .author.me { color: var(--accent); }
+.thread-meta .ts    { color: var(--text-muted); }
+.post-count {
+  font-size: 9px;
+  color: var(--accent-dim);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 5px;
+  color: rgba(0,255,180,0.5);
+}
+
+/* ── Post view ──────────────────────────────────────────────────────────── */
+.post-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-left: 2px solid transparent;
+}
+.post-item.mine { border-left-color: var(--accent); }
+.post-item.alt  { background: rgba(0,255,180,0.01); }
+.post-header    { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.post-author    { font-size: 9px; color: var(--text-secondary); }
+.post-author.me { color: var(--accent); }
+.post-ts        { font-size: 9px; color: var(--text-muted); }
+.post-content   { font-size: 12px; color: var(--text-primary); line-height: 1.7; white-space: pre-wrap; }
+
+/* ── Reply box ──────────────────────────────────────────────────────────── */
+.reply-box {
+  padding: 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hint { font-size: 9px; color: var(--text-muted); }
+
+/* ── Messages ───────────────────────────────────────────────────────────── */
+.messages-layout { display: flex; height: 100%; overflow: hidden; }
+.contact-list {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+}
+.contact-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 100ms;
+}
+.contact-item:hover { background: var(--bg-elevated); }
+.contact-item.active {
+  background: var(--bg-elevated);
+  border-left-color: var(--accent);
+}
+.contact-key  { font-size: 9px; color: var(--text-secondary); }
+.contact-item.active .contact-key { color: var(--accent); }
+.contact-preview {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-thread { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.msg-list   { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+.msg-bubble-row {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+}
+.msg-bubble-row.mine  { align-items: flex-end; }
+.msg-bubble-row.theirs { align-items: flex-start; }
+.msg-bubble {
+  max-width: 78%;
+  border: 1px solid var(--border-subtle);
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+}
+.msg-bubble-row.mine .msg-bubble {
+  background: var(--accent-dim);
+  border-color: var(--border-default);
+}
+.msg-text  { font-size: 12px; color: var(--text-primary); line-height: 1.6; white-space: pre-wrap; }
+.msg-ts    { font-size: 9px; color: var(--text-muted); margin-top: 3px; }
+.send-box  { padding: 12px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.send-row  { display: flex; gap: 8px; }
+.send-row textarea { flex: 1; min-height: 56px; }
+
+/* ── Profile ────────────────────────────────────────────────────────────── */
+.profile-content { padding: 20px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+.info-grid {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  row-gap: 10px;
+}
+.info-grid .field-label { margin: 0; align-self: center; }
+.info-value { font-size: 12px; color: var(--text-primary); align-self: center; }
+.pubkey-block {
+  background: var(--bg-root);
+  border: 1px solid var(--border-default);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.pubkey-value {
+  font-size: 10px;
+  color: var(--accent);
+  word-break: break-all;
+  flex: 1;
+  line-height: 1.5;
+}
+.pubkey-hint { font-size: 9px; color: var(--text-muted); margin-top: 6px; }
+.notice {
+  background: rgba(0,255,180,0.02);
+  border: 1px solid var(--border-subtle);
+  padding: 10px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.notice-icon { flex-shrink: 0; margin-top: 2px; }
+.notice-text { font-size: 10px; color: var(--text-muted); line-height: 1.7; }
+
+/* ── Registration screen ────────────────────────────────────────────────── */
+#registration {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-root);
+}
+.reg-card {
+  width: 380px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+}
+.reg-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.reg-logo   { font-size: 13px; color: var(--accent); letter-spacing: 2px; font-weight: 700; }
+.reg-sub    { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; }
+.reg-body   { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.reg-note   { font-size: 10px; color: var(--text-muted); line-height: 1.7; }
+
+/* ── Misc ───────────────────────────────────────────────────────────────── */
+.empty { padding: 20px; font-size: 11px; color: var(--text-muted); }
+.chevron { color: var(--text-muted); flex-shrink: 0; }
+.form-view { display: flex; flex-direction: column; height: 100%; }
+.form-body  { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.form-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+/* ── Toast notifications ───────────────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-default);
+  padding: 8px 14px;
+  font-size: 11px;
+  color: var(--text-primary);
+  max-width: 360px;
+  animation: toast-in 200ms ease-out;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toast.error   { border-color: var(--critical); color: var(--critical); }
+.toast.success { border-color: var(--accent); color: var(--accent); }
+.toast.fade-out { animation: toast-out 300ms ease-in forwards; }
+@keyframes toast-in  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-8px); } }
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+.pagination-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.pagination-row .btn-ghost { font-size: 10px; padding: 4px 10px; }
+.pagination-info { font-size: 9px; color: var(--text-muted); }
+
+/* ── QR Invite ─────────────────────────────────────────────────────────── */
+.qr-section {
+  text-align: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  padding: 16px;
+}
+.qr-canvas {
+  image-rendering: pixelated;
+  border: 8px solid #ffffff;
+  display: block;
+  margin: 0 auto;
+}
+.invite-string {
+  font-size: 9px;
+  color: var(--text-secondary);
+  word-break: break-all;
+  margin-top: 10px;
+  user-select: all;
+  cursor: text;
+  line-height: 1.6;
+}
+.invite-copy-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.invite-ingest {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  padding: 16px;
+}
+.invite-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.invite-row input { flex: 1; }
+.camera-box {
+  width: 100%;
+  max-width: 260px;
+  margin: 10px auto 0;
+  display: none;
+}
+.camera-box video {
+  width: 100%;
+  border: 1px solid var(--border-default);
+  background: #000;
+}
+
+/* SVG icons (inline) */
+svg { display: inline-block; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+<div id="app">
+  <!-- Registration (shown when no user) -->
+  <div id="registration">
+    <div class="reg-card">
+      <div class="reg-header">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00ffb4" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+        <span class="reg-logo">HVOC</span>
+        <span class="reg-sub">/ IDENTITY INIT</span>
+      </div>
+      <div class="reg-body">
+        <p class="reg-note">A keypair is generated on the Veilid node and encrypted with your passphrase. Your private key never leaves this device.</p>
+        <div>
+          <div class="field-label">HANDLE</div>
+          <input id="reg-name" class="ctrl" type="text" placeholder="handle…" autocomplete="off" />
+        </div>
+        <div>
+          <div class="field-label">PASSPHRASE</div>
+          <input id="reg-pass" class="ctrl" type="password" placeholder="passphrase…" autocomplete="off" />
+        </div>
+        <button id="reg-btn" class="btn" style="justify-content:center;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          CREATE IDENTITY
+        </button>
+        <div id="reg-existing" style="display:none; border-top:1px solid var(--border-subtle); padding-top:14px;">
+          <div class="field-label" style="margin-bottom:8px;">OR UNLOCK EXISTING</div>
+          <select id="reg-id-select" class="ctrl" style="margin-bottom:8px;"></select>
+          <div>
+            <div class="field-label">PASSPHRASE</div>
+            <input id="reg-unlock-pass" class="ctrl" type="password" placeholder="passphrase…" autocomplete="off" />
+          </div>
+          <button id="reg-unlock-btn" class="btn" style="justify-content:center; margin-top:8px;">UNLOCK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app (hidden until logged in) -->
+  <div id="app-shell" style="display:none; flex:1; display:none; overflow:hidden;">
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div class="logo">
+        <div class="logo-mark">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00ffb4" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+          HVOC
+        </div>
+        <div class="logo-sub">VEILID P2P NETWORK</div>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-view="forum">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="14" y2="14"/></svg>
+          FORUM
+        </button>
+        <button class="nav-btn" data-view="messages" id="nav-messages">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          MESSAGES
+        </button>
+        <button class="nav-btn" data-view="profile">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          PROFILE
+        </button>
+      </nav>
+      <div class="identity-block">
+        <div class="field-label">IDENTITY</div>
+        <div id="sid-name" class="identity-name">—</div>
+        <div id="sid-key"  class="identity-key">—</div>
+        <div class="node-status">
+          <div id="node-dot" class="node-dot"></div>
+          <span class="node-label">LOCAL NODE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main panel -->
+    <div id="main">
+
+      <!-- FORUM VIEW -->
+      <div id="view-forum" class="view">
+        <div class="panel-header">
+          <span class="panel-label" id="forum-header-label">THREAD INDEX</span>
+          <div class="header-actions">
+            <input id="forum-search" class="ctrl" type="text" placeholder="Search…" style="width:140px; font-size:10px; padding:4px 8px;" autocomplete="off" />
+            <button class="btn-icon" id="forum-refresh-btn" title="Refresh">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+            <button class="btn" id="new-thread-btn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              NEW THREAD
+            </button>
+          </div>
+        </div>
+        <div id="thread-list" class="scroll"></div>
+        <div id="thread-pagination" class="pagination-row" style="display:none;">
+          <button class="btn-ghost" id="threads-prev">PREV</button>
+          <span class="pagination-info" id="threads-page-info"></span>
+          <button class="btn-ghost" id="threads-next">NEXT</button>
+        </div>
+      </div>
+
+      <!-- NEW THREAD FORM -->
+      <div id="view-new-thread" class="view hidden form-view">
+        <div class="panel-header">
+          <span class="panel-label">NEW THREAD</span>
+          <button class="btn-ghost" id="new-thread-back">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            BACK
+          </button>
+        </div>
+        <div class="form-body">
+          <div>
+            <div class="field-label">TITLE</div>
+            <input id="nt-title" class="ctrl" type="text" placeholder="Thread title…" autocomplete="off" />
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <div class="field-label">CONTENT</div>
+            <textarea id="nt-content" class="ctrl" style="flex:1; min-height:200px;" placeholder="Opening post…"></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn" id="nt-submit">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              PUBLISH
+            </button>
+            <button class="btn-ghost" id="nt-cancel">CANCEL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- THREAD VIEW -->
+      <div id="view-thread" class="view hidden">
+        <div class="panel-header">
+          <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+            <button class="btn-icon" id="thread-back">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span id="thread-title-label" class="panel-label" style="color:var(--text-primary); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+          </div>
+          <span id="thread-post-count" class="panel-label"></span>
+        </div>
+        <div id="post-list" class="scroll"></div>
+        <div class="reply-box">
+          <textarea id="reply-text" class="ctrl" style="min-height:72px;" placeholder="Reply…"></textarea>
+          <div id="reply-attach-preview" style="display:none; padding:4px 8px; font-size:9px; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+            <span id="reply-attach-name"></span>
+            <button class="btn-icon" id="reply-attach-clear" title="Remove" style="padding:1px 4px;">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="reply-footer">
+            <span style="display:flex; align-items:center; gap:8px;">
+              <span class="hint">CTRL+ENTER TO SEND</span>
+              <label class="btn-icon" title="Attach file" style="cursor:pointer;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <input type="file" id="reply-attach" style="display:none;" accept="image/*,.pdf,.txt,.md,.zip" />
+              </label>
+            </span>
+            <button class="btn" id="reply-btn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              POST REPLY
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MESSAGES VIEW -->
+      <div id="view-messages" class="view hidden">
+        <div class="messages-layout">
+          <!-- Contact list -->
+          <div class="contact-list">
+            <div class="panel-header">
+              <span class="panel-label">CONTACTS</span>
+              <button class="btn-icon" id="new-channel-btn" title="New channel">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+            <div id="contact-list" class="scroll"></div>
+          </div>
+          <!-- Message thread -->
+          <div class="msg-thread">
+            <div class="panel-header">
+              <span id="msg-header-label" class="panel-label">SELECT A CONTACT OR PRESS + TO START NEW</span>
+            </div>
+            <div id="msg-list" class="msg-list"></div>
+            <div class="send-box">
+              <div id="recipient-row" style="display:none;">
+                <div class="field-label">RECIPIENT PUBLIC KEY</div>
+                <input id="msg-recipient" class="ctrl" type="text" placeholder="Paste recipient public key…" autocomplete="off" />
+              </div>
+              <div class="send-row">
+                <textarea id="msg-text" class="ctrl" placeholder="Message…"></textarea>
+                <button class="btn" id="msg-send-btn" style="align-self:flex-end;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+              <span class="hint">CTRL+ENTER TO SEND</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFILE VIEW -->
+      <div id="view-profile" class="view hidden">
+        <div class="panel-header">
+          <span class="panel-label">IDENTITY</span>
+        </div>
+        <div class="profile-content">
+          <div class="info-grid">
+            <span class="field-label">HANDLE</span>
+            <span class="info-value" id="prof-name">—</span>
+            <span class="field-label">NODE STATUS</span>
+            <span class="info-value" id="prof-node-status">CONNECTING…</span>
+            <span class="field-label">STORE</span>
+            <span class="info-value">SQLITE + DHT</span>
+          </div>
+          <div>
+            <div class="field-label" style="margin-bottom:8px;">PUBLIC KEY</div>
+            <div class="pubkey-block">
+              <code id="prof-pubkey" class="pubkey-value">—</code>
+              <button class="btn-icon" id="copy-key-btn" title="Copy">
+                <svg id="copy-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+            <p class="pubkey-hint">Share this key so others can open a channel with you.</p>
+          </div>
+          <div class="qr-section">
+            <div class="field-label" style="margin-bottom:10px;">QR INVITE</div>
+            <canvas id="qr-canvas" class="qr-canvas" width="0" height="0"></canvas>
+            <div class="invite-string" id="invite-string"></div>
+            <div class="invite-copy-row">
+              <button class="btn-ghost" id="copy-invite-btn">COPY INVITE</button>
+            </div>
+          </div>
+          <div class="invite-ingest">
+            <div class="field-label">ADD CONTACT VIA INVITE</div>
+            <div class="invite-row">
+              <input id="invite-paste" class="ctrl" type="text" placeholder="Paste hvoc:… invite string" autocomplete="off" />
+              <button class="btn" id="invite-add-btn">ADD</button>
+            </div>
+            <div style="margin-top:10px; text-align:center;">
+              <button class="btn-ghost" id="invite-scan-btn">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                SCAN QR
+              </button>
+            </div>
+            <div id="camera-box" class="camera-box">
+              <video id="camera-video" autoplay playsinline></video>
+            </div>
+          </div>
+          <div class="notice">
+            <svg class="notice-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span class="notice-text">Connected to the HVOC backend via REST API. Data is stored in SQLite and published to the Veilid DHT for P2P distribution.</span>
+          </div>
+          <button class="btn-danger" id="logout-btn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            CLEAR IDENTITY + LOGOUT
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /#main -->
+  </div><!-- /#app-shell -->
+</div><!-- /#app -->
+
+<script>
+'use strict';
+
+// ─── Minimal QR Code Encoder (byte mode, EC level L, versions 1–40) ─────────
+const QR = (() => {
+  // GF(256) arithmetic for Reed-Solomon
+  const EXP = new Uint8Array(512);
+  const LOG = new Uint8Array(256);
+  (() => { let x = 1; for (let i = 0; i < 255; i++) { EXP[i] = x; LOG[x] = i; x = (x << 1) ^ (x & 128 ? 0x11d : 0); } for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255]; })();
+  const gfMul = (a, b) => a && b ? EXP[LOG[a] + LOG[b]] : 0;
+
+  // Reed-Solomon generator polynomials
+  function rsGenPoly(n) {
+    let g = [1];
+    for (let i = 0; i < n; i++) {
+      const ng = new Array(g.length + 1).fill(0);
+      for (let j = 0; j < g.length; j++) { ng[j] ^= g[j]; ng[j + 1] ^= gfMul(g[j], EXP[i]); }
+      g = ng;
+    }
+    return g;
+  }
+
+  function rsEncode(data, ecLen) {
+    const gen = rsGenPoly(ecLen);
+    const r = new Uint8Array(ecLen);
+    for (let i = 0; i < data.length; i++) {
+      const f = r[0] ^ data[i];
+      for (let j = 0; j < ecLen - 1; j++) r[j] = r[j + 1] ^ gfMul(gen[j + 1], f);
+      r[ecLen - 1] = gfMul(gen[ecLen], f);
+    }
+    return r;
+  }
+
+  // Version/EC capacity table: [totalCodewords, ecPerBlock, numBlocks] for EC level L
+  const VERSIONS = [
+    null,
+    [26,7,1],[44,10,1],[70,15,1],[100,20,1],[134,26,1],
+    [172,18,2],[196,20,2],[242,24,2],[292,30,2],[346,18,2],
+    [404,20,4],[466,24,4],[532,26,4],[581,30,3],[655,22,5],
+    [733,24,5],[815,28,5],[901,30,5],[991,26,5],[1085,28,5],
+    [1156,28,5],[1258,28,5],[1364,28,5],[1474,30,5],[1588,26,5],
+    [1706,28,5],[1828,30,5],[1921,30,5],[2051,30,5],[2185,30,5],
+    [2323,30,5],[2465,30,5],[2611,30,5],[2761,30,5],[2876,30,5],
+    [3034,30,5],[3196,30,5],[3362,30,5],[3532,30,5],[3706,30,5],
+  ];
+
+  // More accurate EC block structure for small versions
+  const EC_BLOCKS = {
+    1: [[1,19,26,7]],
+    2: [[1,34,44,10]],
+    3: [[1,55,70,15]],
+    4: [[1,80,100,20]],
+    5: [[1,108,134,26]],
+    6: [[2,68,86,18]],
+    7: [[2,78,98,20]],
+    8: [[2,97,121,24]],
+    9: [[2,116,146,30]],
+    10:[[2,68,86,18],[2,69,87,18]],
+  };
+
+  function getVersionForLength(len) {
+    // Byte mode: 4 bits mode + char count bits + 8*len data bits + 4 terminator (max)
+    for (let v = 1; v <= 40; v++) {
+      const vi = VERSIONS[v]; if (!vi) continue;
+      const totalData = vi[0] - vi[1] * vi[2];
+      const ccBits = v <= 9 ? 8 : 16;
+      const dataBits = 4 + ccBits + len * 8;
+      const dataBytes = Math.ceil(dataBits / 8);
+      // For versions with multiple blocks, check using more accurate table
+      let dataCapacity;
+      if (EC_BLOCKS[v]) {
+        dataCapacity = EC_BLOCKS[v].reduce((s, b) => s + b[0] * b[1], 0);
+      } else {
+        dataCapacity = totalData;
+      }
+      if (dataCapacity >= dataBytes) return v;
+    }
+    return 40;
+  }
+
+  function encodeData(text, version) {
+    const vi = VERSIONS[version];
+    const ccBits = version <= 9 ? 8 : 16;
+    const bytes = new TextEncoder().encode(text);
+    // Build bit stream
+    let bits = '';
+    bits += '0100'; // byte mode indicator
+    bits += bytes.length.toString(2).padStart(ccBits, '0');
+    for (const b of bytes) bits += b.toString(2).padStart(8, '0');
+    // Terminator
+    let dataCapacity;
+    if (EC_BLOCKS[version]) {
+      dataCapacity = EC_BLOCKS[version].reduce((s, b) => s + b[0] * b[1], 0);
+    } else {
+      dataCapacity = vi[0] - vi[1] * vi[2];
+    }
+    const totalBits = dataCapacity * 8;
+    const termLen = Math.min(4, totalBits - bits.length);
+    bits += '0'.repeat(termLen);
+    // Pad to byte boundary
+    if (bits.length % 8) bits += '0'.repeat(8 - bits.length % 8);
+    // Pad bytes
+    const pads = ['11101100', '00010001'];
+    let pi = 0;
+    while (bits.length < totalBits) { bits += pads[pi]; pi ^= 1; }
+
+    const data = new Uint8Array(dataCapacity);
+    for (let i = 0; i < dataCapacity; i++) data[i] = parseInt(bits.substr(i * 8, 8), 2);
+
+    // Split into blocks and compute EC
+    const ecLen = vi[1];
+    let blocks, ecBlocks;
+    if (EC_BLOCKS[version]) {
+      blocks = []; ecBlocks = [];
+      let offset = 0;
+      for (const [count, dcLen] of EC_BLOCKS[version]) {
+        for (let i = 0; i < count; i++) {
+          const block = data.slice(offset, offset + dcLen);
+          blocks.push(block);
+          ecBlocks.push(rsEncode(block, ecLen));
+          offset += dcLen;
+        }
+      }
+    } else {
+      const numBlocks = vi[2];
+      const blockSize = Math.floor(dataCapacity / numBlocks);
+      const extra = dataCapacity % numBlocks;
+      blocks = []; ecBlocks = [];
+      let offset = 0;
+      for (let i = 0; i < numBlocks; i++) {
+        const sz = blockSize + (i >= numBlocks - extra ? 1 : 0);
+        const block = data.slice(offset, offset + sz);
+        blocks.push(block);
+        ecBlocks.push(rsEncode(block, ecLen));
+        offset += sz;
+      }
+    }
+
+    // Interleave data blocks
+    const result = [];
+    const maxBlockLen = Math.max(...blocks.map(b => b.length));
+    for (let i = 0; i < maxBlockLen; i++)
+      for (const b of blocks) if (i < b.length) result.push(b[i]);
+    // Interleave EC blocks
+    for (let i = 0; i < ecLen; i++)
+      for (const b of ecBlocks) if (i < b.length) result.push(b[i]);
+
+    return new Uint8Array(result);
+  }
+
+  // Alignment pattern positions
+  function alignmentPositions(v) {
+    if (v === 1) return [];
+    const tbl = [
+      null,[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],
+      [6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],
+      [6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],
+      [6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],
+      [6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],
+      [6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],
+      [6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170],
+    ];
+    return tbl[v] || [];
+  }
+
+  function createMatrix(version) {
+    const size = version * 4 + 17;
+    const m = Array.from({ length: size }, () => new Uint8Array(size));
+    const reserved = Array.from({ length: size }, () => new Uint8Array(size));
+
+    function setMod(r, c, val) { if (r >= 0 && r < size && c >= 0 && c < size) { m[r][c] = val ? 1 : 0; reserved[r][c] = 1; } }
+
+    // Finder patterns
+    function finderPattern(r, c) {
+      for (let dr = -1; dr <= 7; dr++)
+        for (let dc = -1; dc <= 7; dc++) {
+          const val = (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) &&
+            (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4));
+          setMod(r + dr, c + dc, val);
+        }
+    }
+    finderPattern(0, 0);
+    finderPattern(0, size - 7);
+    finderPattern(size - 7, 0);
+
+    // Timing patterns
+    for (let i = 8; i < size - 8; i++) { setMod(6, i, i % 2 === 0); setMod(i, 6, i % 2 === 0); }
+
+    // Alignment patterns
+    const apos = alignmentPositions(version);
+    for (const r of apos) for (const c of apos) {
+      if ((r < 9 && c < 9) || (r < 9 && c >= size - 8) || (r >= size - 8 && c < 9)) continue;
+      for (let dr = -2; dr <= 2; dr++)
+        for (let dc = -2; dc <= 2; dc++)
+          setMod(r + dr, c + dc, Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0));
+    }
+
+    // Dark module
+    setMod(size - 8, 8, 1);
+
+    // Reserve format info areas
+    for (let i = 0; i < 8; i++) { reserved[8][i] = 1; reserved[8][size - 1 - i] = 1; reserved[i][8] = 1; reserved[size - 1 - i][8] = 1; }
+    reserved[8][8] = 1;
+
+    // Reserve version info areas (version >= 7)
+    if (version >= 7) {
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) {
+        reserved[i][size - 11 + j] = 1;
+        reserved[size - 11 + j][i] = 1;
+      }
+    }
+
+    return { m, reserved, size };
+  }
+
+  function placeData(matrix, reserved, size, codewords) {
+    let bitIdx = 0;
+    const totalBits = codewords.length * 8;
+    let col = size - 1;
+    let upward = true;
+    while (col >= 0) {
+      if (col === 6) col--; // skip timing column
+      for (let i = 0; i < size; i++) {
+        const row = upward ? size - 1 - i : i;
+        for (let dc = 0; dc <= 1; dc++) {
+          const c = col - dc;
+          if (c < 0 || reserved[row][c]) continue;
+          if (bitIdx < totalBits) {
+            matrix[row][c] = (codewords[bitIdx >> 3] >> (7 - (bitIdx & 7))) & 1;
+            bitIdx++;
+          }
+        }
+      }
+      col -= 2;
+      upward = !upward;
+    }
+  }
+
+  function applyMask(matrix, reserved, size, maskNum) {
+    const maskFns = [
+      (r, c) => (r + c) % 2 === 0,
+      (r, c) => r % 2 === 0,
+      (r, c) => c % 3 === 0,
+      (r, c) => (r + c) % 3 === 0,
+      (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
+      (r, c) => (r * c) % 2 + (r * c) % 3 === 0,
+      (r, c) => ((r * c) % 2 + (r * c) % 3) % 2 === 0,
+      (r, c) => ((r + c) % 2 + (r * c) % 3) % 2 === 0,
+    ];
+    const fn = maskFns[maskNum];
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (!reserved[r][c] && fn(r, c))
+          matrix[r][c] ^= 1;
+  }
+
+  function penalty(matrix, size) {
+    let score = 0;
+    // Rule 1: consecutive same-color modules in rows and columns
+    for (let r = 0; r < size; r++) {
+      let cnt = 1;
+      for (let c = 1; c < size; c++) {
+        if (matrix[r][c] === matrix[r][c - 1]) { cnt++; }
+        else { if (cnt >= 5) score += cnt - 2; cnt = 1; }
+      }
+      if (cnt >= 5) score += cnt - 2;
+    }
+    for (let c = 0; c < size; c++) {
+      let cnt = 1;
+      for (let r = 1; r < size; r++) {
+        if (matrix[r][c] === matrix[r - 1][c]) { cnt++; }
+        else { if (cnt >= 5) score += cnt - 2; cnt = 1; }
+      }
+      if (cnt >= 5) score += cnt - 2;
+    }
+    // Rule 2: 2x2 blocks
+    for (let r = 0; r < size - 1; r++)
+      for (let c = 0; c < size - 1; c++) {
+        const v = matrix[r][c];
+        if (v === matrix[r][c + 1] && v === matrix[r + 1][c] && v === matrix[r + 1][c + 1]) score += 3;
+      }
+    return score;
+  }
+
+  // Format info bits for EC level L (= 01)
+  const FORMAT_BITS = [0x77c4,0x72f3,0x7daa,0x789d,0x662f,0x6318,0x6c41,0x6976];
+
+  function placeFormatInfo(matrix, size, maskNum) {
+    const bits = FORMAT_BITS[maskNum];
+    const positions = [
+      [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]],
+      [[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]],
+    ];
+    for (const set of positions)
+      for (let i = 0; i < 15; i++)
+        matrix[set[i][0]][set[i][1]] = (bits >> (14 - i)) & 1;
+  }
+
+  // Version info (for version >= 7)
+  const VERSION_BITS = [
+    null,null,null,null,null,null,null,
+    0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,
+    0x10B78,0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,
+    0x191E1,0x1AFAB,0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,
+    0x228BA,0x2379F,0x24B0B,0x2542E,0x26A64,0x27541,
+  ];
+
+  function placeVersionInfo(matrix, size, version) {
+    if (version < 7) return;
+    const bits = VERSION_BITS[version];
+    for (let i = 0; i < 18; i++) {
+      const bit = (bits >> i) & 1;
+      const r = Math.floor(i / 3);
+      const c = size - 11 + (i % 3);
+      matrix[r][c] = bit;
+      matrix[c][r] = bit;
+    }
+  }
+
+  function generate(text) {
+    const version = getVersionForLength(text.length);
+    const codewords = encodeData(text, version);
+    const { m, reserved, size } = createMatrix(version);
+    placeData(m, reserved, size, codewords);
+    placeVersionInfo(m, size, version);
+
+    // Try all 8 masks, pick lowest penalty
+    let bestMask = 0, bestScore = Infinity;
+    for (let mask = 0; mask < 8; mask++) {
+      const copy = m.map(row => new Uint8Array(row));
+      applyMask(copy, reserved, size, mask);
+      placeFormatInfo(copy, size, mask);
+      const s = penalty(copy, size);
+      if (s < bestScore) { bestScore = s; bestMask = mask; }
+    }
+    applyMask(m, reserved, size, bestMask);
+    placeFormatInfo(m, size, bestMask);
+
+    return { modules: m, size };
+  }
+
+  return { generate };
+})();
+
+// ─── Invite encode/decode ───────────────────────────────────────────────────
+function encodeInvite(authorId, handle) {
+  return 'hvoc:' + authorId + '.' + handle;
+}
+
+function parseInvite(str) {
+  str = (str || '').trim();
+  if (!str.startsWith('hvoc:')) return null;
+  const payload = str.slice(5);
+  const dotIdx = payload.lastIndexOf('.');
+  if (dotIdx < 1) return null;
+  const authorId = payload.slice(0, dotIdx);
+  const handle = payload.slice(dotIdx + 1);
+  if (!authorId || !handle) return null;
+  return { authorId, handle };
+}
+
+// ─── API Client ──────────────────────────────────────────────────────────────
+const API_BASE = 'http://127.0.0.1:7734';
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(`${API_BASE}${path}`, opts);
+  return res.json();
+}
+
+const dbAPI = {
+  async loadUser() {
+    const r = await api('GET', '/api/identity').catch(() => null);
+    if (!r || r.error) return null;
+    return { publicKey: r.author_id, handle: r.handle || r.author_id };
+  },
+  async createUser(handle, passphrase) {
+    const r = await api('POST', '/api/identity', { handle, passphrase });
+    if (r.error) throw new Error(r.error);
+    return { publicKey: r.author_id, handle };
+  },
+  async unlockUser(authorId, passphrase) {
+    const r = await api('POST', '/api/identity/unlock', { author_id: authorId, passphrase });
+    if (r.error) throw new Error(r.error);
+    return { publicKey: r.author_id, handle: authorId };
+  },
+  async listIdentities() {
+    const r = await api('GET', '/api/identity/list');
+    return r.identities || [];
+  },
+
+  async getThreads(limit = 50, offset = 0, query = '') {
+    const q = query ? `&q=${encodeURIComponent(query)}` : '';
+    const r = await api('GET', `/api/threads?limit=${limit}&offset=${offset}${q}`);
+    return (r.threads || []).map(t => ({
+      id: t.object_id,
+      title: t.title,
+      author: t.author_id,
+      createdAt: t.created_at * 1000,
+      postCount: t.post_count,
+    }));
+  },
+  async getThread(id) {
+    const tr = await api('GET', `/api/threads/${id}`);
+    if (tr.error) return null;
+    const pr = await api('GET', `/api/threads/${id}/posts`);
+    const thread = {
+      id: tr.thread.object_id,
+      title: tr.thread.title,
+      author: tr.thread.author_id,
+      createdAt: tr.thread.created_at * 1000,
+    };
+    const posts = (pr.posts || []).map(p => ({
+      id: p.object_id,
+      threadId: p.thread_id,
+      body: p.body,
+      author: p.author_id,
+      createdAt: p.created_at * 1000,
+      attachment: p.attachment_meta ? JSON.parse(p.attachment_meta) : null,
+    }));
+    return { thread, posts };
+  },
+  async createThread(title, body) {
+    const r = await api('POST', '/api/threads', { title, body, tags: [] });
+    if (r.error) throw new Error(r.error);
+    return r.thread_id;
+  },
+  async createPost(threadId, body, attachmentMeta) {
+    const payload = { body };
+    if (attachmentMeta) payload.attachment_meta = JSON.stringify(attachmentMeta);
+    const r = await api('POST', `/api/threads/${threadId}/posts`, payload);
+    if (r.error) throw new Error(r.error);
+    return r.post_id;
+  },
+  async uploadAttachment(file) {
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const data = btoa(binary);
+    const r = await api('POST', '/api/attachments', { data, filename: file.name, mime: file.type || 'application/octet-stream' });
+    if (r.error) throw new Error(r.error);
+    return r.attachment;
+  },
+
+  async getMessages(peerId) {
+    const q = peerId ? `?peer_id=${encodeURIComponent(peerId)}` : '';
+    const r = await api('GET', `/api/messages${q}`);
+    return (r.messages || []).map(m => ({
+      id: m.object_id,
+      sender: m.sender_id,
+      recipient: m.recipient_id,
+      body: m.body,
+      timestamp: m.sent_at * 1000,
+      direction: m.direction,
+    }));
+  },
+  async sendMessage(recipientId, body) {
+    const r = await api('POST', '/api/messages', { recipient_id: recipientId, body });
+    if (r.error) throw new Error(r.error);
+    return r.object_id;
+  },
+
+  async getContacts() {
+    const r = await api('GET', '/api/contacts');
+    return (r.contacts || []).map(c => c.author_id);
+  },
+};
+
+// ─── WebSocket ───────────────────────────────────────────────────────────────
+let ws = null;
+let nodeStatus = 'CONNECTING…';
+
+function connectWebSocket() {
+  if (ws) { try { ws.close(); } catch (_) {} }
+  ws = new WebSocket(`ws://127.0.0.1:7734/ws`);
+  ws.onopen = () => {
+    nodeStatus = 'CONNECTED';
+    updateNodeStatus();
+  };
+  ws.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data);
+      handleSyncEvent(event);
+    } catch (_) {}
+  };
+  ws.onclose = () => {
+    nodeStatus = 'DISCONNECTED';
+    updateNodeStatus();
+    setTimeout(connectWebSocket, 3000);
+  };
+  ws.onerror = () => {};
+}
+
+function handleSyncEvent(event) {
+  if (event.AttachmentChanged) {
+    const att = event.AttachmentChanged;
+    nodeStatus = att.public_internet_ready ? 'PUBLIC INTERNET' : att.state;
+    updateNodeStatus();
+  }
+  if (event.DhtValueChanged) {
+    // Auto-refresh the current view when DHT data changes.
+    if (currentView === 'forum') loadForum();
+    else if (currentView === 'thread' && activeThreadId) loadThread(activeThreadId);
+  }
+  if (event.AppMessageReceived) {
+    // Refresh messages if we're on that view.
+    if (currentView === 'messages') {
+      renderContactList();
+      renderMsgThread();
+    }
+    updateMsgBadge();
+    // Desktop notification for incoming DM.
+    if (document.hidden && Notification.permission === 'granted') {
+      new Notification('HVOC — New Message', { body: 'You received a new encrypted message.', icon: undefined });
+    }
+  }
+}
+
+function updateNodeStatus() {
+  const dot = document.getElementById('node-dot');
+  if (dot) dot.classList.toggle('off', nodeStatus === 'DISCONNECTED');
+  const el = document.getElementById('prof-node-status');
+  if (el) el.textContent = nodeStatus;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const truncKey = (k, n = 8) => k ? `${k.slice(0, n)}…${k.slice(-n)}` : '';
+const relTime  = (ts) => {
+  const d = Date.now() - ts;
+  if (d < 60000)    return `${Math.floor(d / 1000)}s ago`;
+  if (d < 3600000)  return `${Math.floor(d / 60000)}m ago`;
+  if (d < 86400000) return `${Math.floor(d / 3600000)}h ago`;
+  return `${Math.floor(d / 86400000)}d ago`;
+};
+const esc = (s) => {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+};
+
+// ─── Toast notifications ─────────────────────────────────────────────────────
+function toast(msg, type = 'error') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    el.addEventListener('animationend', () => el.remove());
+  }, 4000);
+}
+
+// ─── Handle resolution cache ────────────────────────────────────────────────
+const handleCache = {};
+
+async function resolveHandles(authorIds) {
+  const unknown = authorIds.filter(id => id && !(id in handleCache));
+  if (unknown.length === 0) return;
+  try {
+    const r = await api('POST', '/api/profiles/resolve', { author_ids: unknown });
+    if (r.handles) {
+      for (const [id, handle] of Object.entries(r.handles)) {
+        handleCache[id] = handle;
+      }
+    }
+  } catch (_) {}
+  // Fill in unresolved with null so we don't re-fetch.
+  for (const id of unknown) {
+    if (!(id in handleCache)) handleCache[id] = null;
+  }
+}
+
+function displayName(authorId, isMe) {
+  if (isMe) return 'YOU';
+  const handle = handleCache[authorId];
+  return handle ? esc(handle) : truncKey(authorId);
+}
+
+function renderAttachment(att) {
+  const url = `${API_BASE}/api/attachments/${esc(att.hash)}`;
+  if (att.mime && att.mime.startsWith('image/')) {
+    return `<div class="post-attachment"><img src="${url}" alt="${esc(att.filename)}" style="max-width:100%;max-height:400px;border-radius:4px;margin-top:8px;cursor:pointer;" onclick="window.open('${url}','_blank')" /></div>`;
+  }
+  const sizeKB = att.size ? (att.size / 1024).toFixed(1) + ' KB' : '';
+  return `<div class="post-attachment" style="margin-top:8px;"><a href="${url}" target="_blank" style="color:var(--accent);font-size:10px;">ATTACHMENT: ${esc(att.filename)} ${sizeKB}</a></div>`;
+}
+
+// ─── Pagination state ───────────────────────────────────────────────────────
+const PAGE_SIZE = 30;
+let threadPage = 0;
+
+// ─── App State ────────────────────────────────────────────────────────────────
+let currentUser    = null;
+let currentView    = 'forum';
+let activeThreadId = null;
+let activeContact  = null;
+let showNewChannel = false;
+let msgBadgeInterval = null;
+
+// ─── View routing ─────────────────────────────────────────────────────────────
+const VIEWS = ['forum', 'new-thread', 'thread', 'messages', 'profile'];
+
+function showView(name) {
+  VIEWS.forEach(v => {
+    document.getElementById(`view-${v}`).classList.toggle('hidden', v !== name);
+  });
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const target = btn.dataset.view;
+    const match  = name === target || (name === 'new-thread' && target === 'forum') || (name === 'thread' && target === 'forum');
+    btn.classList.toggle('active', match);
+  });
+  currentView = name;
+}
+
+// ─── Forum ────────────────────────────────────────────────────────────────────
+async function loadForum() {
+  showView('forum');
+  const offset = threadPage * PAGE_SIZE;
+  const searchQuery = (document.getElementById('forum-search')?.value || '').trim();
+  const threads = await dbAPI.getThreads(PAGE_SIZE + 1, offset, searchQuery);
+  const hasMore = threads.length > PAGE_SIZE;
+  const page = threads.slice(0, PAGE_SIZE);
+
+  const el = document.getElementById('thread-list');
+  document.getElementById('forum-header-label').textContent = `THREAD INDEX`;
+
+  // Resolve handles for thread authors.
+  const authorIds = page.map(t => t.author).filter(Boolean);
+  await resolveHandles(authorIds);
+
+  if (page.length === 0) {
+    el.innerHTML = '<div class="empty">NO THREADS. CREATE THE FIRST.</div>';
+    document.getElementById('thread-pagination').style.display = 'none';
+    return;
+  }
+
+  el.innerHTML = page.map(t => {
+    const mine = t.author === currentUser.publicKey;
+    return `
+      <div class="thread-item" data-id="${esc(t.id)}">
+        <div class="thread-title">${esc(t.title)}</div>
+        <div class="thread-meta">
+          <span class="author ${mine ? 'me' : ''}">${displayName(t.author, mine)}</span>
+          <span class="ts">${relTime(t.createdAt)}</span>
+          <span class="ts">${t.postCount} post${t.postCount !== 1 ? 's' : ''}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.querySelectorAll('.thread-item').forEach(item => {
+    item.addEventListener('click', () => loadThread(item.dataset.id));
+  });
+
+  // Pagination controls.
+  const pagEl = document.getElementById('thread-pagination');
+  if (threadPage > 0 || hasMore) {
+    pagEl.style.display = 'flex';
+    document.getElementById('threads-prev').disabled = threadPage === 0;
+    document.getElementById('threads-next').disabled = !hasMore;
+    document.getElementById('threads-page-info').textContent = `PAGE ${threadPage + 1}`;
+  } else {
+    pagEl.style.display = 'none';
+  }
+}
+
+async function loadThread(threadId) {
+  activeThreadId = threadId;
+  const data = await dbAPI.getThread(threadId);
+  if (!data) return loadForum();
+
+  const { thread, posts } = data;
+  showView('thread');
+  document.getElementById('thread-title-label').textContent = thread.title;
+  document.getElementById('thread-post-count').textContent  = `${posts.length} POSTS`;
+  document.getElementById('reply-text').value = '';
+
+  // Resolve handles for post authors.
+  const authorIds = posts.map(p => p.author).filter(Boolean);
+  await resolveHandles(authorIds);
+
+  const list = document.getElementById('post-list');
+  list.innerHTML = posts.map((p, i) => {
+    const mine = p.author === currentUser.publicKey;
+    return `
+      <div class="post-item ${mine ? 'mine' : ''} ${i % 2 !== 0 ? 'alt' : ''}">
+        <div class="post-header">
+          <span class="post-author ${mine ? 'me' : ''}">${displayName(p.author, mine)}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span class="post-ts">${relTime(p.createdAt)}</span>
+            ${mine ? `<button class="btn-icon delete-post-btn" data-id="${esc(p.id)}" title="Delete" style="padding:1px 4px;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>` : ''}
+          </span>
+        </div>
+        <div class="post-content">${esc(p.body)}</div>
+        ${p.attachment ? renderAttachment(p.attachment) : ''}
+      </div>`;
+  }).join('');
+
+  list.scrollTop = list.scrollHeight;
+
+  // Delete post buttons.
+  list.querySelectorAll('.delete-post-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        const r = await api('DELETE', `/api/posts/${btn.dataset.id}`);
+        if (r.error) throw new Error(r.error);
+        toast('Post deleted', 'success');
+        loadThread(activeThreadId);
+      } catch (err) { toast(err.message); }
+    });
+  });
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+async function loadMessages() {
+  showView('messages');
+  await renderContactList();
+  renderMsgThread();
+}
+
+async function renderContactList() {
+  const contacts = await dbAPI.getContacts();
+  const messages = await dbAPI.getMessages();
+  const el = document.getElementById('contact-list');
+
+  if (contacts.length === 0) {
+    el.innerHTML = '<div class="empty">NO CONTACTS YET</div>';
+    return;
+  }
+
+  // Resolve handles for contacts.
+  await resolveHandles(contacts);
+
+  el.innerHTML = contacts.map(c => {
+    const lastMsg = [...messages].reverse().find(m => m.sender === c || m.recipient === c);
+    const active  = c === activeContact;
+    const name = handleCache[c] || truncKey(c);
+    return `
+      <div class="contact-item ${active ? 'active' : ''}" data-key="${esc(c)}">
+        <div class="contact-key">${esc(name)}</div>
+        ${lastMsg ? `<div class="contact-preview">${esc(lastMsg.body.slice(0, 28))}${lastMsg.body.length > 28 ? '…' : ''}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  el.querySelectorAll('.contact-item').forEach(item => {
+    item.addEventListener('click', () => {
+      activeContact  = item.dataset.key;
+      showNewChannel = false;
+      document.getElementById('recipient-row').style.display = 'none';
+      document.getElementById('msg-recipient').value = '';
+      renderContactList();
+      renderMsgThread();
+    });
+  });
+}
+
+async function renderMsgThread() {
+  const headerEl = document.getElementById('msg-header-label');
+  const listEl   = document.getElementById('msg-list');
+
+  if (showNewChannel) {
+    headerEl.textContent = 'NEW CHANNEL';
+    document.getElementById('recipient-row').style.display = 'block';
+    listEl.innerHTML = '';
+    return;
+  }
+  if (!activeContact) {
+    headerEl.textContent = 'SELECT A CONTACT OR PRESS + TO START NEW';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  const contactName = handleCache[activeContact] || truncKey(activeContact);
+  headerEl.textContent = `CHANNEL: ${contactName}`;
+  document.getElementById('recipient-row').style.display = 'none';
+
+  const thread = await dbAPI.getMessages(activeContact);
+
+  if (thread.length === 0) {
+    listEl.innerHTML = '<div class="empty">NO MESSAGES IN THIS CHANNEL YET</div>';
+    return;
+  }
+
+  listEl.innerHTML = thread.map(m => {
+    const mine = m.direction === 'sent';
+    return `
+      <div class="msg-bubble-row ${mine ? 'mine' : 'theirs'}">
+        <div class="msg-bubble">
+          <div class="msg-text">${esc(m.body)}</div>
+        </div>
+        <div class="msg-ts">${relTime(m.timestamp)}</div>
+      </div>`;
+  }).join('');
+
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+function loadProfile() {
+  showView('profile');
+  document.getElementById('prof-name').textContent   = currentUser.handle;
+  document.getElementById('prof-pubkey').textContent = currentUser.publicKey;
+
+  // Generate QR invite
+  const inviteStr = encodeInvite(currentUser.publicKey, currentUser.handle);
+  document.getElementById('invite-string').textContent = inviteStr;
+
+  try {
+    const qr = QR.generate(inviteStr);
+    const canvas = document.getElementById('qr-canvas');
+    const scale = 4;
+    const px = qr.size * scale;
+    canvas.width = px;
+    canvas.height = px;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, px, px);
+    ctx.fillStyle = '#000000';
+    for (let y = 0; y < qr.size; y++)
+      for (let x = 0; x < qr.size; x++)
+        if (qr.modules[y][x]) ctx.fillRect(x * scale, y * scale, scale, scale);
+  } catch (e) {
+    console.warn('QR generation failed:', e);
+  }
+}
+
+// ─── Node dot pulse ───────────────────────────────────────────────────────────
+let nodeDotInterval = null;
+function startNodeDot() {
+  let on = true;
+  nodeDotInterval = setInterval(() => {
+    on = !on;
+    const dot = document.getElementById('node-dot');
+    if (dot) dot.classList.toggle('off', !on);
+  }, 1800);
+}
+
+// ─── Message badge ────────────────────────────────────────────────────────────
+async function updateMsgBadge() {
+  const msgs = await dbAPI.getMessages().catch(() => []);
+  const btn  = document.getElementById('nav-messages');
+  const count = msgs.length;
+  const textNodes = [...btn.childNodes].filter(n => n.nodeType === 3);
+  if (textNodes.length) {
+    textNodes[0].nodeValue = count > 0 ? `MESSAGES (${count})` : 'MESSAGES';
+  } else {
+    btn.lastChild.textContent = count > 0 ? `MESSAGES (${count})` : 'MESSAGES';
+  }
+}
+
+function startMsgBadge() {
+  clearInterval(msgBadgeInterval);
+  updateMsgBadge();
+  msgBadgeInterval = setInterval(updateMsgBadge, 10000);
+}
+
+// ─── App boot ─────────────────────────────────────────────────────────────────
+function showApp(user) {
+  currentUser = user;
+  document.getElementById('registration').style.display    = 'none';
+  const shell = document.getElementById('app-shell');
+  shell.style.display = 'flex';
+  shell.style.flex    = '1';
+  shell.style.overflow = 'hidden';
+
+  document.getElementById('sid-name').textContent = user.handle;
+  document.getElementById('sid-key').textContent  = truncKey(user.publicKey);
+  document.getElementById('prof-name').textContent   = user.handle;
+  document.getElementById('prof-pubkey').textContent = user.publicKey;
+
+  startNodeDot();
+  startMsgBadge();
+  connectWebSocket();
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  loadForum();
+}
+
+async function showRegistration() {
+  currentUser = null;
+  clearInterval(msgBadgeInterval);
+  clearInterval(nodeDotInterval);
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('registration').style.display = 'flex';
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-pass').value = '';
+
+  // Check for existing identities to show unlock UI.
+  try {
+    const ids = await dbAPI.listIdentities();
+    const existingDiv = document.getElementById('reg-existing');
+    if (ids.length > 0) {
+      existingDiv.style.display = 'block';
+      const select = document.getElementById('reg-id-select');
+      select.innerHTML = ids.map(i => `<option value="${esc(i.id)}">${esc(i.handle)} (${esc(i.id.slice(0,12))}…)</option>`).join('');
+    } else {
+      existingDiv.style.display = 'none';
+    }
+  } catch (_) {
+    document.getElementById('reg-existing').style.display = 'none';
+  }
+
+  document.getElementById('reg-name').focus();
+}
+
+// ─── Event wiring ─────────────────────────────────────────────────────────────
+// Registration — Create
+document.getElementById('reg-btn').addEventListener('click', async () => {
+  const handle = document.getElementById('reg-name').value.trim();
+  const pass   = document.getElementById('reg-pass').value;
+  if (!handle || !pass) return;
+  const btn = document.getElementById('reg-btn');
+  btn.disabled = true;
+  btn.textContent = 'GENERATING KEYPAIR…';
+  try {
+    const user = await dbAPI.createUser(handle, pass);
+    showApp(user);
+  } catch (e) {
+    toast(e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = 'CREATE IDENTITY';
+});
+document.getElementById('reg-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('reg-pass').focus();
+});
+document.getElementById('reg-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('reg-btn').click();
+});
+
+// Registration — Unlock
+document.getElementById('reg-unlock-btn').addEventListener('click', async () => {
+  const authorId = document.getElementById('reg-id-select').value;
+  const pass     = document.getElementById('reg-unlock-pass').value;
+  if (!authorId || !pass) return;
+  const btn = document.getElementById('reg-unlock-btn');
+  btn.disabled = true;
+  btn.textContent = 'UNLOCKING…';
+  try {
+    const user = await dbAPI.unlockUser(authorId, pass);
+    // Get the handle from the select text.
+    const select = document.getElementById('reg-id-select');
+    const label = select.options[select.selectedIndex]?.textContent || '';
+    const handle = label.split(' (')[0] || authorId;
+    user.handle = handle;
+    showApp(user);
+  } catch (e) {
+    toast(e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = 'UNLOCK';
+});
+
+// Nav
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.view;
+    if (v === 'forum')    { activeThreadId = null; threadPage = 0; loadForum(); }
+    if (v === 'messages') { loadMessages(); }
+    if (v === 'profile')  { loadProfile(); }
+  });
+});
+
+// Forum
+document.getElementById('forum-refresh-btn').addEventListener('click', () => { threadPage = 0; loadForum(); });
+document.getElementById('forum-search').addEventListener('keydown', e => { if (e.key === 'Enter') { threadPage = 0; loadForum(); } });
+document.getElementById('threads-prev').addEventListener('click', () => { if (threadPage > 0) { threadPage--; loadForum(); } });
+document.getElementById('threads-next').addEventListener('click', () => { threadPage++; loadForum(); });
+document.getElementById('new-thread-btn').addEventListener('click', () => {
+  document.getElementById('nt-title').value   = '';
+  document.getElementById('nt-content').value = '';
+  showView('new-thread');
+  document.getElementById('nt-title').focus();
+});
+document.getElementById('new-thread-back').addEventListener('click', loadForum);
+document.getElementById('nt-cancel').addEventListener('click', loadForum);
+document.getElementById('nt-submit').addEventListener('click', async () => {
+  const title = document.getElementById('nt-title').value.trim();
+  const body  = document.getElementById('nt-content').value.trim();
+  if (!title || !body) return;
+  const btn = document.getElementById('nt-submit');
+  btn.disabled = true;
+  try {
+    await dbAPI.createThread(title, body);
+  } catch (e) {
+    toast(e.message);
+  }
+  btn.disabled = false;
+  loadForum();
+});
+document.getElementById('nt-title').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('nt-content').focus();
+});
+
+// Thread reply — attachment state
+let pendingAttachment = null;
+document.getElementById('reply-attach').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const att = await dbAPI.uploadAttachment(file);
+    pendingAttachment = att;
+    document.getElementById('reply-attach-name').textContent = file.name;
+    document.getElementById('reply-attach-preview').style.display = 'flex';
+  } catch (err) { toast(err.message); }
+  e.target.value = '';
+});
+document.getElementById('reply-attach-clear').addEventListener('click', () => {
+  pendingAttachment = null;
+  document.getElementById('reply-attach-preview').style.display = 'none';
+});
+
+document.getElementById('thread-back').addEventListener('click', loadForum);
+document.getElementById('reply-btn').addEventListener('click', async () => {
+  const body = document.getElementById('reply-text').value.trim();
+  if (!body || !activeThreadId) return;
+  const btn = document.getElementById('reply-btn');
+  btn.disabled = true;
+  try {
+    await dbAPI.createPost(activeThreadId, body, pendingAttachment || undefined);
+    pendingAttachment = null;
+    document.getElementById('reply-attach-preview').style.display = 'none';
+  } catch (e) {
+    toast(e.message);
+  }
+  btn.disabled = false;
+  await loadThread(activeThreadId);
+});
+document.getElementById('reply-text').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') document.getElementById('reply-btn').click();
+});
+
+// Messages
+document.getElementById('new-channel-btn').addEventListener('click', () => {
+  showNewChannel = true;
+  activeContact  = null;
+  document.getElementById('recipient-row').style.display = 'block';
+  document.getElementById('msg-recipient').value = '';
+  document.getElementById('msg-text').value = '';
+  renderContactList();
+  renderMsgThread();
+  document.getElementById('msg-recipient').focus();
+});
+document.getElementById('msg-send-btn').addEventListener('click', async () => {
+  const body      = document.getElementById('msg-text').value.trim();
+  const recipient = showNewChannel
+    ? document.getElementById('msg-recipient').value.trim()
+    : activeContact;
+  if (!body || !recipient) return;
+  const btn = document.getElementById('msg-send-btn');
+  btn.disabled = true;
+  try {
+    await dbAPI.sendMessage(recipient, body);
+  } catch (e) {
+    toast(e.message);
+  }
+  document.getElementById('msg-text').value = '';
+  activeContact  = recipient;
+  showNewChannel = false;
+  document.getElementById('recipient-row').style.display = 'none';
+  btn.disabled = false;
+  await renderContactList();
+  await renderMsgThread();
+  updateMsgBadge();
+});
+document.getElementById('msg-text').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') document.getElementById('msg-send-btn').click();
+});
+
+// Profile
+document.getElementById('copy-key-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(currentUser.publicKey).catch(() => {});
+  const icon = document.getElementById('copy-icon');
+  icon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+  setTimeout(() => {
+    icon.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>';
+  }, 2000);
+});
+// Copy invite string
+document.getElementById('copy-invite-btn').addEventListener('click', () => {
+  const str = document.getElementById('invite-string').textContent;
+  navigator.clipboard.writeText(str).catch(() => {});
+  const btn = document.getElementById('copy-invite-btn');
+  btn.textContent = 'COPIED';
+  setTimeout(() => { btn.textContent = 'COPY INVITE'; }, 2000);
+});
+
+// Add contact via invite paste
+document.getElementById('invite-add-btn').addEventListener('click', async () => {
+  const raw = document.getElementById('invite-paste').value;
+  const invite = parseInvite(raw);
+  if (!invite) { toast('Invalid invite. Expected: hvoc:<key>.<handle>'); return; }
+  if (invite.authorId === currentUser.publicKey) { toast('Cannot add yourself.'); return; }
+  try {
+    const r = await api('POST', '/api/contacts', { author_id: invite.authorId, nickname: invite.handle });
+    if (r.error) throw new Error(r.error);
+    toast('Contact added: ' + invite.handle, 'success');
+    document.getElementById('invite-paste').value = '';
+    handleCache[invite.authorId] = invite.handle;
+  } catch (e) { toast(e.message); }
+});
+
+// QR camera scan
+let scanStream = null, scanInterval = null;
+document.getElementById('invite-scan-btn').addEventListener('click', async () => {
+  const box = document.getElementById('camera-box');
+  const video = document.getElementById('camera-video');
+  if (scanStream) {
+    scanStream.getTracks().forEach(t => t.stop());
+    scanStream = null; clearInterval(scanInterval);
+    box.style.display = 'none'; return;
+  }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = scanStream;
+    box.style.display = 'block';
+    toast('Camera active. Hold QR code in view.', 'success');
+    // Poll for BarcodeDetector API (available in Chrome/Edge)
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      scanInterval = setInterval(async () => {
+        if (video.readyState < 2) return;
+        try {
+          const codes = await detector.detect(video);
+          for (const code of codes) {
+            const invite = parseInvite(code.rawValue);
+            if (invite) {
+              document.getElementById('invite-paste').value = code.rawValue;
+              document.getElementById('invite-add-btn').click();
+              scanStream.getTracks().forEach(t => t.stop());
+              scanStream = null; clearInterval(scanInterval);
+              box.style.display = 'none'; return;
+            }
+          }
+        } catch (_) {}
+      }, 400);
+    } else {
+      toast('QR scanning requires Chrome/Edge. Paste the invite string instead.');
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null; box.style.display = 'none';
+    }
+  } catch (e) {
+    toast('Camera access denied or unavailable.');
+  }
+});
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  activeThreadId = null;
+  activeContact  = null;
+  showNewChannel = false;
+  if (ws) { try { ws.close(); } catch (_) {} ws = null; }
+  showRegistration();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  const user = await dbAPI.loadUser();
+  if (user) showApp(user);
+  else showRegistration();
+})();
+</script>
+</body>
+</html>

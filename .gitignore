@@ -1,0 +1,27 @@
+# Build artifacts
+/target/
+/dist/hvoc-win11/hvoc-cli.exe
+/dist/hvoc-win11/hvoc-win11/hvoc-cli.exe
+/dist/*.zip
+
+# Claude Code local settings
+.claude/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Veilid node data
+.hvoc/
+
+# Environment
+.env
+*.pem
+*.key

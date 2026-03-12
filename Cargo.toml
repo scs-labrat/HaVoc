@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = [
+    "hvoc-core",
+    "hvoc-veilid",
+    "hvoc-store",
+    "hvoc-api",
+    "hvoc-cli",
+]
+
+[workspace.dependencies]
+# async runtime
+tokio = { version = "1", features = ["full"] }
+
+# serialisation
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+
+# hashing (BLAKE3 — matches Veilid's VLD0 suite)
+blake3 = "1"
+
+# Veilid
+veilid-core = { version = "0.5", features = ["rt-tokio"] }
+
+# storage (rusqlite to match veilid-core's sqlite dependency)
+rusqlite = { version = "0.37", features = ["bundled"] }
+
+# error handling
+thiserror = "1"
+anyhow    = "1"
+
+# time
+chrono = { version = "0.4", features = ["serde"] }
+
+# logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# API bridge
+axum      = { version = "0.7", features = ["ws"] }
+tower     = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+
+# HTTP client (for DNS-over-HTTPS bootstrap)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# misc
+hex     = "0.4.3"
+base64  = "0.22.1"
+futures = "0.3"
