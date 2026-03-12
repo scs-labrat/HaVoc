@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 //! HVOC CLI — entrypoint for identity management, forum ops, and API server.
 //!
 //! Usage:
