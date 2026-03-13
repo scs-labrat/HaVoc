@@ -1398,6 +1398,8 @@ function connectWebSocket() {
   ws.onerror = () => {};
 }
 
+let callState = 'idle'; // idle | ringing | incoming | in_call
+
 function handleSyncEvent(event) {
   if (event.AttachmentChanged) {
     const att = event.AttachmentChanged;
@@ -2132,7 +2134,7 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 // Extended ramp for finer brightness detail (70 levels)
 const ASCII_CHARS = ' `.-\':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@';
 const CALL_WIDTH = 80, CALL_HEIGHT = 50, CALL_FPS = 8;
-let callState = 'idle'; // idle | ringing | incoming | in_call
+// callState declared earlier (before renderMsgThread)
 let callPeer = null;
 let callStream = null;    // MediaStream from getUserMedia
 let callVideoEl = null;   // hidden <video> for capture
